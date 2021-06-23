@@ -17,7 +17,7 @@ struct iterator_traits{
 
 
 //partial specification for raw pointer and const raw pointer
-template <typename T>
+template <T>
 struct iterator_traits<T*>{
     typedef typename    T           value_type;
     typedef typename    T*          pointer_type;
@@ -28,7 +28,7 @@ struct iterator_traits<T*>{
     typedef typename    ptrdiff_t   pointer_different_type; 
 };
 
-template <typename T>
+template <T>
 struct iterator_traits<const T*>{
     typedef typename    T           value_type;
     typedef typename    T*          pointer_type;
