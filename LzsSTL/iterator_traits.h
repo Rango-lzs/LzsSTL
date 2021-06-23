@@ -6,6 +6,8 @@
 
 template<typename iterator>
 struct iterator_traits{
+
+    typedef typename    iterator::iterator_category         iterator_category;
     typedef typename    iterator::value_type                value_type;
     typedef typename    iterator::pointer_type              pointer_type;
     typedef typename    iterator::const_value_type          const_value_type;
@@ -21,6 +23,7 @@ template <class T>
 struct iterator_traits<T*>{
     // typedef typename    T           value_type;
     // their should not have typename , typename only declare for nested type define
+    typedef    random_iterator_tag  itrator_category;
     typedef    T           value_type;
     typedef    T*          pointer_type;
     typedef    const T     const_value_type;
@@ -32,6 +35,8 @@ struct iterator_traits<T*>{
 
 template <class T>
 struct iterator_traits<const T*>{
+    
+    typedef    random_iterator_tag  itrator_category;
     typedef     T           value_type;
     typedef     T*          pointer_type;
     typedef     const T     const_value_type;
