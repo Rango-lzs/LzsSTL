@@ -2,7 +2,7 @@
 #define ALLOCATOR_HH
 
 #include "alloc.h"
-#include "construct.h"
+//#include "construct.h"
 
 template <class T>
 class allocator
