@@ -17,26 +17,28 @@ struct iterator_traits{
 
 
 //partial specification for raw pointer and const raw pointer
-template <T>
+template <class T>
 struct iterator_traits<T*>{
-    typedef typename    T           value_type;
-    typedef typename    T*          pointer_type;
-    typedef typename    const T     const_value_type;
-    typedef typename    const T*    const_pointer_type;
-    typedef typename    T&          reference_type;
-    typedef typename    const T&    const_reference_type;
-    typedef typename    ptrdiff_t   pointer_different_type; 
+    // typedef typename    T           value_type;
+    // their should not have typename , typename only declare for nested type define
+    typedef    T           value_type;
+    typedef    T*          pointer_type;
+    typedef    const T     const_value_type;
+    typedef    const T*    const_pointer_type;
+    typedef    T&          reference_type;
+    typedef    const T&    const_reference_type;
+    typedef    ptrdiff_t   pointer_different_type; 
 };
 
-template <T>
+template <class T>
 struct iterator_traits<const T*>{
-    typedef typename    T           value_type;
-    typedef typename    T*          pointer_type;
-    typedef typename    const T     const_value_type;
-    typedef typename    const T*    const_pointer_type;
-    typedef typename    T&          reference_type;
-    typedef typename    const T&    const_reference_type;
-    typedef typename    ptrdiff_t   pointer_different_type; 
+    typedef     T           value_type;
+    typedef     T*          pointer_type;
+    typedef     const T     const_value_type;
+    typedef     const T*    const_pointer_type;
+    typedef     T&          reference_type;
+    typedef     const T&    const_reference_type;
+    typedef     ptrdiff_t   pointer_different_type; 
 };
 
 #endif
