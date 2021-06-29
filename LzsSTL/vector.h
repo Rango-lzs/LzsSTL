@@ -140,16 +140,24 @@ class vector
 
 		void __allocate_and_fill(size_t n, const T& value);
 		
+		void __fill_assign();
+		
+		void __fill_assign(size_type n, const T& value);
+		
+		void __destroy_and_deallocate();
 
-		void __fill_assign()
-		{
 
-		}
-
-		void __destroy_and_deallocate()
-		{
-		}
-
+		template <class Integer>
+		void __assign_dispatch(Integer n, Integer value, __true_type);
+		template <class InputIterator>
+		void __assign_dispatch(InputIterator first, InputIterator last, __false_type);
+		template <class InputIterator>
+		void __assign_aux(InputIterator first, InputIterator last, input_iterator_tag);
+		template <class ForwardIterator>
+		void __assign_aux(ForwardIterator first, ForwardIterator last, forward_iterator_tag);
+		
+		template<class InputIterator>
+		void __allocate_and_copy(InputIterator first, InputIterator last);
 };
 
 
@@ -167,6 +175,135 @@ void vector<T, Alloc>::__vector_construct(InputIte first, InputIte last, __false
 {
 	__allocate_and_copy(n, value);
 }
+
+template<class T,class Alloc>
+void vector<T, Alloc>::__destroy_and_deallocate()
+{
+	data_allocator::destroy(start, finish);
+	data_allocator::deallocate(start, end_of_storage - start);
+}
+
+template<class T, class Alloc>
+void vector<T, Alloc>::__allocate_and_fill(size_t n, const T& value)
+{
+	start = data_allocator::allocate(n);
+	finish = ::uninitialized_fill_n(begin(), n, value);
+	end_of_storage = finish;
+}
+
+template<class T,class Alloc>
+template<class InputIterator>
+void vector<T, Alloc>::__allocate_and_copy(InputIterator first, InputIterator last)
+{
+	difference_type n = last - first;
+	start = data_allocator::allocate(n);
+	finish = ::uninitialized_copy(first, last, start);
+	end_of_storage = finish;
+}
+
+template<class T, class Alloc>
+void vector<T, Alloc>::__fill_assign(size_type n, const T& value)
+{
+	if (n > capacity())
+	{
+		vector<T, Alloc> tmp(n, value);
+		tmp.swap(*this);
+	}
+	else if (n > size)
+	{
+		::fill_n(begin(), end(), value);
+		finish = uninitialized_fill_n(finish, n - size(), value);
+	}
+	else
+	{
+		erase(::fill_n(start, n, value), finish);
+	}
+}
+
+template<class T, class Alloc>
+template<class Integer>
+void vector<T, Alloc>::__assign_dispatch(Integer n, Integer value, __true_type)
+{
+	__fill_assign(n, value);
+}
+
+template<class T, class Alloc>
+template<class InputIterator>
+void vector<T, Alloc>::__assign_dispatch(InputIterator first, InputIterator last, __false_type)
+{
+	__assign_aux(first,last, ::iteratory_category(first));
+}
+
+template<class T, class Alloc>
+template<class InputIterator>
+void vector<T, Alloc>::__assign_aux(InputIterator first, InputIterator last, input_iterator_tag)
+{
+	iterator cur = begin();
+	for (; first != last && cur != end(); ++first, ++cur)
+	{
+		*cur = *first;
+	}
+	if (first == last)
+		erase(cur, end());
+	else
+		insert(end(), first, last);
+}
+
+template<class T, class Alloc>
+template<class ForwardIterator>
+void vector<T, Alloc>::__assign_aux(ForwardIterator first, ForwardIterator last, forward_iterator_tag)
+{
+	size_type len = distance(first, last);
+	if (len > capacity())
+	{
+		__destroy_and_deallocate();
+		__allocate_and_copy(first, last);
+	}
+	else if (size()>=len)
+	{
+		iterator new_finish = ::copy(first, last, start);
+		data_allocator::destroy(new_finish, finish);
+		finish = new_finish;
+	}
+	else
+	{
+		// 前半部分直接copy  后半部分未初始化copy
+		ForwardIterator mid = first;
+		advance(mid, size());
+		::copy(first, mid, start);
+		finish = ::uninitialized_copy(mid, last, finish);
+	}
+}
+
+
+template<class T, class Alloc /*= alloc*/>
+void vector<T, Alloc>::__insert_aux(iterator pos, const T& value)
+{
+	// 用于扩容时的操作
+	const size_type old_size = size();
+	const size_type len = old_size != 0 ? 2 * old_size : 1;
+	iterator new_start = data_allocator::allocate(len);
+	iterator new_finish = new_start;
+	try
+	{
+		new_finish = uninitialized_copy(start, pos, new_start);
+		data_allocator::construct(new_finish, value);
+		++new_finish;
+		new_finish = uninitialized_copy(pos, finish, new_finish);
+	}
+	catch (...)
+	{
+		data_allocator::destroy(new_start, new_finish);
+		data_allocator::deallocate(new_start, len);
+		throw;
+	}
+	__destroy_and_deallocate();
+	start = new_start;
+	finish = new_finish;
+	end_of_storage = new_start + len;
+}
+
+
 
 template<class T, class Alloc /*= alloc*/>
 vector<T, Alloc>::vector(const vector& vec)
@@ -247,39 +384,33 @@ void vector<T, Alloc>::push_back(const T& value)
 }
 
 
-template<class T, class Alloc /*= alloc*/>
-void vector<T, Alloc>::__insert_aux(iterator pos, const T& value)
-{
-	// 用于扩容时的操作
-	const size_type old_size = size();
-	const size_type len = old_size != 0 ? 2 * old_size : 1;
-	iterator new_start = data_allocator::allocate(len);
-	iterator new_finish = new_start;
-	try
-	{
-		new_finish = uninitialized_copy(start, pos, new_start);
-		data_allocator::construct(new_finish, value);
-		++new_finish;
-		new_finish = uninitialized_copy(pos, finish, new_finish);
-	}
-	catch (...)
-	{
-		data_allocator::destroy(new_start, new_finish);
-		data_allocator::deallocate(new_start, len);
-		throw;
-	}
-	__destroy_and_deallocate();
-	start = new_start;
-	finish = new_finish;
-	end_of_storage = new_start + len;
-}
 
-template<class T, class Alloc>
-void vector<T,Alloc>::__allocate_and_fill(size_t n,const T& value)
-{
-	start = data_allocator::allocate(n);
-	finish = ::uninitialized_fill_n(begin(), n, value);
-	end_of_storage = finish;
-}
-	
+
+
 #endif
+
+
+/*
+assign -> 赋值操作   
+
+1. assign(n,value) 直接赋值
+	
+	__fill_assign(n,value)
+		unitialized_fill_n | fill_n
+
+2 assign(class first, class last) 通过迭代器范围赋值 根据迭代器是否为integer() 进行派生
+
+	__assign_dispatch(first ,last ,integer())
+		
+		__assign_dispatch(first ,last ,_true_type)
+			__fill_assign(n,value)
+
+		__assign_dispatch(first ,last ,_false_type)
+			__assign_aux(first, last, category())
+
+*/
+
+/*
+insert -> 插入操作
+
+*/
