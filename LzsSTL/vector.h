@@ -1,12 +1,16 @@
 #ifndef VECTOR_HH
 #define VECTOR_HH
-#include <vector>
+//#include <vector>
 #include "iterator.h"
+#include "allocator.h"
+#include "type_traits.h"
+#include "uninitailized.h"
+#include "alloc.h"
 
 //assign_dispatch 表示方法的分发  即方法重载 
 //aux   表示辅助函数
 
-template<class T, class Alloc = alloc>
+template<class T, class Alloc = alloc<T>>
 class vector
 {
     public:
@@ -23,11 +27,11 @@ class vector
 		//iterator types
 		typedef T* iterator;
 		typedef const T* const_iterator;
-		typedef reverse_iterator<const_iterator>  const_reverse_iterator;
-		typedef reverse_iterator<iterator>  reverse_iterator;
+		//typedef reverse_iterator<const_iterator>  const_reverse_iterator;
+		//typedef reverse_iterator<iterator>  reverse_iterator;
 
 	public:
-		typedef allocator<T, Alloc>  data_allocator;
+		typedef allocator<T,Alloc>  data_allocator;
 
     private:
         T* start;
@@ -64,13 +68,14 @@ class vector
 	public:
 		//iterator 
 		iterator begin() { return start; }
-		const_iterator cbegin() const {return start}
+		const_iterator begin() const { return start; }
 		iterator end(){return finish;}
-		const_iterator cend() const{return finish;}
-		reverse_iterator rbegin(){ return reverse_iterator(end());}
+		const_iterator end() const{return finish;}
+
+		/*reverse_iterator rbegin(){ return reverse_iterator(end());}
 		const_reverse_iterator crbegin() const{return const_reverse_iterator(end());}
 		reverse_iterator rend(){return reverse_iterator(begin());}
-		const_reverse_iterator crend() const{return const_reverse_iterator(begin());}
+		const_reverse_iterator crend() const{return const_reverse_iterator(begin());}*/
 
 		//capacity
 		//这里直接使用start还是使用begin()??
@@ -121,8 +126,6 @@ class vector
 		void resize(size_type new_size){ resize(new_size,T());}
 		void resize(size_type new_size, const T& x);
 
-		void reserve(size_type n);
-
 		void swap(vector& x);
 
 		allocator_type get_allocator() { return allocator_type(); }
@@ -133,11 +136,19 @@ class vector
 		void __vector_construct(Integer n, Integer value, __true_type);
 		template<class InputIte>
 		void __vector_construct(InputIte first, InputIte last, __false_type);
-
-
-	
 		void __insert_aux(iterator pos, const T& value);
 
+		void __allocate_and_fill(size_t n, const T& value);
+		
+
+		void __fill_assign()
+		{
+
+		}
+
+		void __destroy_and_deallocate()
+		{
+		}
 
 };
 
@@ -164,7 +175,7 @@ vector<T, Alloc>::vector(const vector& vec)
 }
 
 template<class T, class Alloc /*= alloc*/>
-vector<T, Alloc>::vector(const vector&& vec)
+vector<T, Alloc>::vector(vector&& vec)
 {
 	start = vec.start;
 	finish = vec.finish;
@@ -177,7 +188,7 @@ vector<T, Alloc>::vector(const vector&& vec)
 // 前者只需复制资源给自己，后者需要管理已由的资源
 
 template<class T, class Alloc /*= alloc*/>
-vector& vector<T, Alloc>::operator=(const vector& x)
+vector<T,Alloc>& vector<T, Alloc>::operator=(const vector& x)
 {
 	if ((*this) != x)
 	{
@@ -227,11 +238,11 @@ void vector<T, Alloc>::push_back(const T& value)
 	// 容量不够就扩容 
 	if (finish != end_of_storage) //
 	{
-		data_allocator::construct(finish, x);
+		data_allocator::construct(finish, value);
 	}
 	else
 	{
-		__insert_aux(end(), x);
+		__insert_aux(end(), value);
 	}
 }
 
@@ -241,13 +252,13 @@ void vector<T, Alloc>::__insert_aux(iterator pos, const T& value)
 {
 	// 用于扩容时的操作
 	const size_type old_size = size();
-	const size_type len = old_size != 0 ？ 2 * old_size: 1;
+	const size_type len = old_size != 0 ? 2 * old_size : 1;
 	iterator new_start = data_allocator::allocate(len);
 	iterator new_finish = new_start;
 	try
 	{
 		new_finish = uninitialized_copy(start, pos, new_start);
-		data_allocator::construct(new_finish, x);
+		data_allocator::construct(new_finish, value);
 		++new_finish;
 		new_finish = uninitialized_copy(pos, finish, new_finish);
 	}
@@ -262,6 +273,13 @@ void vector<T, Alloc>::__insert_aux(iterator pos, const T& value)
 	finish = new_finish;
 	end_of_storage = new_start + len;
 }
-	
 
+template<class T, class Alloc>
+void vector<T,Alloc>::__allocate_and_fill(size_t n,const T& value)
+{
+	start = data_allocator::allocate(n);
+	finish = ::uninitialized_fill_n(begin(), n, value);
+	end_of_storage = finish;
+}
+	
 #endif

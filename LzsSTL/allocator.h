@@ -4,7 +4,7 @@
 #include "alloc.h"
 //#include "construct.h"
 
-template <class T>
+template <class T,class Alloc=alloc>
 class allocator
 {
     public:
@@ -27,53 +27,53 @@ class allocator
         static void destroy(T* first,T* last);
 };
 
-template<class T>
-T* allocate<T>::allocate()
+template<class T,class Alloc>
+T* allocator<T,Alloc>::allocate()
 {
-    return static_cast<T*>(alloc::allocate(sizeof(T)));
+    return static_cast<T*>(Alloc::allocate(sizeof(T)));
 }
 
-template<class T>
-T* allocate<T>::allocate(size_t n)
+template<class T, class Alloc>
+T* allocator<T,Alloc>::allocate(size_t n)
 {
     if(n==0) return nullptr;
-    return static_cast<T*>(alloc::allocate(n*sizeof(T)));
+    return static_cast<T*>(Alloc::allocate(n*sizeof(T)));
 }
 
-template<class T>
-void allocate<T>::deallocate(T* ptr)
+template<class T, class Alloc>
+void allocator<T,Alloc>::deallocate(T* ptr)
 {
     if(ptr==nullptr) return;
-    alloc::deallocate(ptr,sizeof(T));
+	Alloc::deallocate(ptr,sizeof(T));
 }
 
-template<class T>
-void allocate<T>::deallocate(T* ptr, size_t n)
+template<class T,class Alloc>
+void allocator<T,Alloc>::deallocate(T* ptr, size_t n)
 {
     if(ptr==nullptr) return;
-    alloc::deallocate(ptr, n*sizeof(T));
+	Alloc::deallocate(ptr);
 }
 
-template<class T>
-void allocate<T>::construct(T* ptr)
+template<class T,class Alloc>
+void allocator<T,Alloc>::construct(T* ptr)
 {
     ::construct(ptr);
 }
 
-template<class T>
-void allocate<T>::construct(T* ptr,const T& x)
+template<class T,class Alloc>
+void allocator<T,Alloc>::construct(T* ptr,const T& x)
 {
     ::construct(ptr,x);
 }
 
-template<class T>
-void allocate<T>::destroy(T* ptr)
+template<class T, class Alloc>
+void allocator<T,Alloc>::destroy(T* ptr)
 {
     ::destroy(ptr);
 }
 
-template<class T>
-void allocate<T>::destroy(T* first, T* last)
+template<class T, class Alloc>
+void allocator<T,Alloc>::destroy(T* first, T* last)
 {
     ::destroy(first,last);
 }

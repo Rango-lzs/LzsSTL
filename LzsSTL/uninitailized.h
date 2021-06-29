@@ -1,6 +1,7 @@
 #ifndef UNINITIALIZED_HH
 #define UNINITIALIZED_HH
-
+#include <cstring>
+#include "allocator.h"
 // 未初始化容器的 copy fill fill_n操作
 
 
@@ -26,7 +27,8 @@ template<class InputIterator, class ForwardIterator>
 inline ForwardIterator
 __uninitialized_copy_aux(InputIterator first, InputIterator last, ForwardIterator result, __true_type)
 {
-	return ::copy(first, last, result);
+	//return ::copy(first, last, result);
+	return nullptr;
 }
 
 template<class InputIterator, class ForwardIterator>
@@ -77,8 +79,8 @@ __uninitialized_fill_aux(ForwardIterator first, ForwardIterator last, const T& v
 	 ::fill(first, last, value);
 }
 
-template<class ForwardIterator>
-inline 
+template<class ForwardIterator, class T>
+inline void
 __uninitialized_fill_aux(ForwardIterator first, ForwardIterator last, const T& value, __false_type)
 {
 	for (; first != last; ++first)
@@ -90,35 +92,45 @@ __uninitialized_fill_aux(ForwardIterator first, ForwardIterator last, const T& v
 
 //************  fill_n  **************
 template<class ForwardIterator, class T>
-inline void
+inline ForwardIterator
 uninitialized_fill_n(ForwardIterator first,size_t n, const T& value)
 {
-	 __uninitialized_fill(first, n, value, value_type(first));
+	 return __uninitialized_fill_n(first, n, value, value_type(first));
 }
 // 为什么不直接通过T 来获取是否是pod 类型 ，是因为只有迭代器才定义了is_pod??
 template<class ForwardIterator, class T>
-inline void
+inline ForwardIterator
 __uninitialized_fill_n(ForwardIterator first,size_t n, const T&value, T*)
 {
 	typedef typename __type_traits<T>::is_POD_type POD_type;
-	 __uninitialized_fill_n_aux(first, n, value, POD_type());
+	return __uninitialized_fill_n_aux(first, n, value, POD_type());
 }
 
 template< class ForwardIterator, class T>
-inline void
-__uninitialized_fill_aux(ForwardIterator first,size_t n, const T& value, __true_type)
+inline ForwardIterator
+__uninitialized_fill_n_aux(ForwardIterator first,size_t n, const T& value, __true_type)
 {
 	 ::fill_n(first, n, value);
+	 return first + n;
 }
 
-template<class ForwardIterator>
+template<class ForwardIterator, class T>
 inline void
-__uninitialized_fill_aux(ForwardIterator first, size_t n, const T& value, __false_type)
+__uninitialized_fill_n_aux(ForwardIterator first, size_t n, const T& value, __false_type)
 {
 	for (; n>0;--n, ++first)
 	{
 		construct(first, value);
 	}
+	return first + n;
+}
+
+template<class Iterator, class T>
+inline void 
+fill_n(Iterator pos, size_t n, const T& value)
+{
+	for (; n > 0; n--, pos++)
+		*pos = value;
 }
 
 #endif

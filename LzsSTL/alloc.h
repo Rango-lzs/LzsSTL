@@ -1,11 +1,15 @@
 #ifndef _ALLOC_HH
 #define _ALLOC_HH
-
+#include <stdlib.h>
 template<class T>
 class alloc
 {
-    static T* allocate(size_t n);
-    static void deallocate(T* ptr);
+public:
+	static T* allocate(size_t n) { 
+		//return (T*)malloc(n*sizeof(T)); 
+		return new T[n];
+	}
+	static void deallocate(T* ptr) { free(ptr); }
 };
 
 template<class T>
