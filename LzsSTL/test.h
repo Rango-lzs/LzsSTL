@@ -76,8 +76,9 @@ void UnitTest::Run()
 		}
 	}
 
-	std::cout<<" green "<<
+	std::cout << " green " << std::endl;
 }
+
 } //end of namespace test
 
 #endif

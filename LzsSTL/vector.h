@@ -108,7 +108,8 @@ class vector
 		
 		template<class InputIterator>
 		void assign(InputIterator first, InputIterator last);
-	
+
+		
 		void push_back(const T& value);
 		void pop_back();
 
@@ -119,9 +120,11 @@ class vector
 
 		iterator insert(iterator pos);
 		iterator insert(iterator pos, const T& x);
-		void insert(iterator pos, size_t n, const T& x);
+		
+		void insert(iterator pos, size_type n, const T& x);
+		
 		template<class InputIterator>
-		void insert(InputIterator first, InputIterator last);
+		void insert(iterator pos,InputIterator first, InputIterator last);
 
 		void resize(size_type new_size){ resize(new_size,T());}
 		void resize(size_type new_size, const T& x);
@@ -143,14 +146,24 @@ class vector
 		void __fill_assign();
 		
 		void __fill_assign(size_type n, const T& value);
+
+		void __fill_insert(iterator pos, size_type n, const T& x);
+
+		template<class Integer>
+		void __insert_dispatch(iterator pos, Integer n, Integer x, __true_type);
+
+		template<class InputIterator>
+		void __insert_dispatch(iterator pos, InputIterator first, InputIterator last, __false_type);
 		
 		void __destroy_and_deallocate();
 
 
 		template <class Integer>
 		void __assign_dispatch(Integer n, Integer value, __true_type);
+
 		template <class InputIterator>
 		void __assign_dispatch(InputIterator first, InputIterator last, __false_type);
+
 		template <class InputIterator>
 		void __assign_aux(InputIterator first, InputIterator last, input_iterator_tag);
 		template <class ForwardIterator>
@@ -158,9 +171,214 @@ class vector
 		
 		template<class InputIterator>
 		void __allocate_and_copy(InputIterator first, InputIterator last);
+
+		template <class InputIterator>
+		void __range_insert(iterator position, InputIterator first, InputIterator last, input_iterator_tag);
 };
 
+//***************************************************************************************
 
+// 构造函数
+template<class T, class Alloc>
+template<class InputIterator>
+vector<T, Alloc>::vector(InputIterator first, InputIterator last)
+{
+	typedef typename __is_integer<InputIterator>::is_integer integer;
+	__vector_construct(first, last, integer());
+}
+
+//复制构造函数
+template<class T, class Alloc /*= alloc*/>
+vector<T, Alloc>::vector(const vector& vec)
+{
+	__allocate_and_copy(vec.begin(), vec.end());
+}
+
+template<class T, class Alloc /*= alloc*/>
+vector<T, Alloc>::vector(vector&& vec)
+{
+	start = vec.start;
+	finish = vec.finish;
+	end_of_storage = vec.end_of_storage;
+	vec.start = vec.finish = vec.end_of_storage = nullptr;
+}
+
+// 用一个已经存在的对象创建另一个(待创建)对象  拷贝构造函数
+// 用一个已经存在的对象创赋值另一个(已存在)对象  赋值构造函数
+// 前者只需复制资源给自己，后者需要管理已由的资源
+
+template<class T, class Alloc /*= alloc*/>
+vector<T, Alloc>& vector<T, Alloc>::operator=(const vector& x)
+{
+	if ((*this) != x)
+	{
+		const size_t xlen = x.size();
+		if (xlen > capacity()) //超过物理容量
+		{
+			__destroy_and_deallocate();
+			__allocate_and_copy(x.begin(), x.end());
+		}
+		else if (size >= xlen)  //小于逻辑容量
+		{
+			iterator i = :copy(x.begin(), e.end(), begin());
+			data_allocator::destroy(i, finish);
+			finish = start + xlen;
+		}
+		else
+		{
+			::copy(x.begin(), x.begin() + size(), start);
+			::uninitialized_copy(x.begin() + size(), x.end(), finish);
+			end_of_storage = finish = start + xlen;
+		}
+
+	}
+	return *this;
+}
+
+template<class T, class Alloc /* = alloc*/>
+vector<T, Alloc>& vector<T, Alloc>::operator =(vector<T, Alloc>&&x)
+{
+	// 移动一下内存就可以 不需要重新分配
+	if (this != &x)
+	{
+		__destroy_and_deallocate();
+		start = x.start;
+		finish = x.finish;
+		end_of_storage = x.end_of_storage;
+		// 连等操作 从右往左运算
+		x.start = x.finish = x.end_of_storage = 0;
+	}
+	return *this;
+}
+
+//初始化容器
+template<class T, class Alloc>
+template<class InputIterator>
+void vector<T, Alloc>::assign(InputIterator first, InputIterator last) {
+	typedef typename __is_integer<InputIterator>::is_integer integer;
+	__assign_dispatch(first, last, integer());
+}
+
+template<class T, class Alloc /*= alloc*/>
+void vector<T, Alloc>::push_back(const T& value)
+{
+	// 尾部添加一个元素
+	// 容量不够就扩容 
+	if (finish != end_of_storage) //
+	{
+		data_allocator::construct(finish, value);
+	}
+	else
+	{
+		__insert_aux(end(), value);
+	}
+}
+
+template<class T, class Alloc>
+void vector<T, Alloc>::pop_back()
+{
+	--finish;
+	data_allocator::destroy(finish);
+}
+
+template<class T, class Alloc>
+typename vector<T, Alloc>::iterator
+vector<T, Alloc>::erase(iterator pos)
+{
+	if (pos + 1 != end())
+		::copy(pos + 1, finish, position);
+	--finish;
+	data_allocator::destroy(finish);
+	return pos;
+}
+
+template<class T, class Alloc>
+typename vector<T, Alloc>::iterator
+vector<T, Alloc>::erase(iterator first, iterator last)
+{
+	iterator i = ::copy(last, finish, first);
+	data_allocator::destroy(i, finish);
+	return first;
+}
+
+template<class T, class Alloc>
+typename vector<T, Alloc>::iterator
+vector<T, Alloc>::insert(iterator pos, const T& x)
+{
+	size_type n = pos - begin();
+	if (finish != end_of_storage && pos == end())
+	{
+		data_allocator::construct(finish, x);
+		++finish;
+	}
+	else
+		__insert_aux(pos, x);
+	return begin() + n;
+}
+
+template<class T, class Alloc>
+typename vector<T, Alloc>::iterator
+vector<T, Alloc>::insert(iterator pos)
+{
+	size_type n = pos - begin();
+	if (finish != end_of_storage && pos == end())
+	{
+		data_allocator::construct(finish);
+		++finish;
+	}
+	else
+		__insert_aux(pos, T());
+	return begin() + n;
+}
+
+template<class T, class Alloc>
+void vector<T, Alloc>::insert(iterator pos, size_type n, const T& value)
+{
+	__fill_insert(pos, n, x);
+}
+
+template<class T, class Alloc>
+template<class InputIterator>
+void vector<T, Alloc>::insert(iterator pos, InputIterator first, InputIterator last)
+{
+	typedef typename __is_integer<InputIterator>::is_integer integer;
+	__insert_dispatch(pos, first, last, integer());
+}
+
+template<class T, class Alloc>
+void vector<T, Alloc>::resize(size_type new_size, const T&x)
+{
+	if (new_size < size())
+		erase(begin() + new_size, end());
+	else
+		insert(end(), new_size - size(), x);
+}
+
+template<class T, class Alloc>
+void vector<T, Alloc>::reserve(size_type n)
+{
+	if (capacity() < n)
+	{
+		const size_type old_size = size();
+		iterator tmp = data_allocator::allocate(n);
+		::uninitialized_copy(start, finish, tmp);
+		__destroy_and_deallocate();
+		start = tmp;
+		finish = tmp + old_size;
+		end_of_storage = start + n;
+	}
+}
+
+template<class T, class Alloc>
+void vector<T, Alloc>::swap(vector<T, Alloc>&x)
+{
+	if (*this != x)
+	{
+		::swap(start, x.start);
+		::swap(finish, x.finish);
+		::swap(end_of_storage, x.end_of_storage);
+	}
+}
 
 template<class T, class Alloc>
 template<class Integer>
@@ -339,90 +557,18 @@ void vector<T, Alloc>::__range_insert(iterator position, InputIterator first, In
 	}
 }
 
-template<class T, class Alloc>
-template<class ForwardIterator>
-void vector<T, Alloc>::__range_insert(iterator pos, ForwardIterator first, ForwardIterator last, forward_iterator_tag)
+
+// 重载操作符
+
+template<class T,class Alloc>
+inline bool operator == (const vector<T, Alloc> &x, const vector<T, Alloc>& y)
 {
-
+	return x.size() == y.size() && ::equal(x, begin(), x.end(), y.begin(), y.end());
 }
 
-template<class T, class Alloc /*= alloc*/>
-vector<T, Alloc>::vector(const vector& vec)
-{	
-	__allocate_and_copy(vec.begin(), vec.end());
-}
 
-template<class T, class Alloc /*= alloc*/>
-vector<T, Alloc>::vector(vector&& vec)
-{
-	start = vec.start;
-	finish = vec.finish;
-	end_of_storage = vec.end_of_storage;
-	vec.start = vec.finish = vec.end_of_storage=nullptr;
-}
 
-// 用一个已经存在的对象创建另一个(待创建)对象  拷贝构造函数
-// 用一个已经存在的对象创赋值另一个(已存在)对象  赋值构造函数
-// 前者只需复制资源给自己，后者需要管理已由的资源
 
-template<class T, class Alloc /*= alloc*/>
-vector<T,Alloc>& vector<T, Alloc>::operator=(const vector& x)
-{
-	if ((*this) != x)
-	{
-		const size_t xlen = x.size();
-		if (xlen>capacity()) //超过物理容量
-		{
-			__destroy_and_deallocate();
-			__allocate_and_copy(x.begin(), x.end());
-		}
-		else if (size >= xlen)  //小于逻辑容量
-		{
-			iterator i = :copy(x.begin(), e.end(), begin());
-			data_allocator::destroy(i, finish);
-			finish = start + xlen;
-		}
-		else
-		{
-			::copy(x.begin(), x.begin() + size(), start);
-			::uninitialized_copy(x.begin() + size(), x.end(), finish);
-			end_of_storage = finish = start + xlen;
-		}
-
-	}
-	return *this;
-}
-
-template<class T, class Alloc /* = alloc*/>
-vector<T,Alloc>& vector<T,Alloc>::operator =(vector<T,Alloc>&&x)
-{
-	// 移动一下内存就可以 不需要重新分配
-	if (this != &x)
-	{
-		__destroy_and_deallocate();
-		start = x.start;
-		finish = x.finish;
-		end_of_storage = x.end_of_storage;
-		// 连等操作 从右往左运算
-		x.start = x.finish = x.end_of_storage = 0;
-	}
-	return *this;
-}
-
-template<class T, class Alloc /*= alloc*/>
-void vector<T, Alloc>::push_back(const T& value)
-{
-	// 尾部添加一个元素
-	// 容量不够就扩容 
-	if (finish != end_of_storage) //
-	{
-		data_allocator::construct(finish, value);
-	}
-	else
-	{
-		__insert_aux(end(), value);
-	}
-}
 
 
 
@@ -453,5 +599,11 @@ assign -> 赋值操作
 
 /*
 insert -> 插入操作
+
+*/
+
+
+/*
+函数会针对是否是POD type 进行重载， POD type 可以直接memcpy, 非POD 需要调用构造器进行复制。
 
 */
