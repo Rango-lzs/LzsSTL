@@ -234,6 +234,7 @@ void vector<T, Alloc>::__assign_dispatch(InputIterator first, InputIterator last
 	__assign_aux(first,last, ::iteratory_category(first));
 }
 
+//not POD type??
 template<class T, class Alloc>
 template<class InputIterator>
 void vector<T, Alloc>::__assign_aux(InputIterator first, InputIterator last, input_iterator_tag)
@@ -249,6 +250,7 @@ void vector<T, Alloc>::__assign_aux(InputIterator first, InputIterator last, inp
 		insert(end(), first, last);
 }
 
+// POD type?? 
 template<class T, class Alloc>
 template<class ForwardIterator>
 void vector<T, Alloc>::__assign_aux(ForwardIterator first, ForwardIterator last, forward_iterator_tag)
@@ -303,7 +305,46 @@ void vector<T, Alloc>::__insert_aux(iterator pos, const T& value)
 	end_of_storage = new_start + len;
 }
 
+template<class T, class Alloc>
+template<class Integer>
+void vector<T, Alloc>::__insert_dispatch(iterator pos, Integer n, Integer x, __true_type)
+{
+	__fill_insert(pos, n, x);
+}
 
+template<class T, class Alloc>
+template<class InputIterator>
+void vector<T, Alloc>::__insert_dispatch(iterator pos, InputIterator first, InputIterator last, __false_type)
+{
+	__range_insert(pos, first, last, ::iteratory_category(first));
+}
+
+template<class T, class Alloc>
+void vector<T, Alloc>::__fill_insert(iterator pos, size_type n, const T& x)
+{
+	if (n != 0)
+	{
+
+	}
+}
+
+template<class T, class Alloc>
+template <class InputIterator>
+void vector<T, Alloc>::__range_insert(iterator position, InputIterator first, InputIterator last, input_iterator_tag)
+{
+	for (; first != last; ++first)
+	{
+		position = insert(position, *first);
+		++position;
+	}
+}
+
+template<class T, class Alloc>
+template<class ForwardIterator>
+void vector<T, Alloc>::__range_insert(iterator pos, ForwardIterator first, ForwardIterator last, forward_iterator_tag)
+{
+
+}
 
 template<class T, class Alloc /*= alloc*/>
 vector<T, Alloc>::vector(const vector& vec)
