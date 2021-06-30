@@ -42,7 +42,7 @@ class vector
 
 		//基本都是标准的写法，熟记于心 什么时候是const 什么时候是引用 
         // constructor
-        vector():start(nullptr) ,end(nullptr),end_of_storage(nullptr){ }
+        vector():start(nullptr) ,finish(nullptr),end_of_storage(nullptr){ }
 
 		explicit vector(size_t n) { __allocate_and_fill(n, T()); }
 		vector(size_t n, const T& value) { __allocate_and_fill(n, value); }
@@ -220,7 +220,7 @@ vector<T, Alloc>& vector<T, Alloc>::operator=(const vector& x)
 		}
 		else if (size >= xlen)  //小于逻辑容量
 		{
-			iterator i = :copy(x.begin(), e.end(), begin());
+			iterator i = :copy(x.begin(), x.end(), begin());
 			data_allocator::destroy(i, finish);
 			finish = start + xlen;
 		}
@@ -267,6 +267,7 @@ void vector<T, Alloc>::push_back(const T& value)
 	if (finish != end_of_storage) //
 	{
 		data_allocator::construct(finish, value);
+		++finish;
 	}
 	else
 	{
@@ -568,14 +569,11 @@ inline bool operator == (const vector<T, Alloc> &x, const vector<T, Alloc>& y)
 
 
 
-
-
-
-
-
-
 #endif
 
+/*
+vector[ * * * * .)   [begin, end)
+*/
 
 /*
 assign -> 赋值操作   
@@ -600,10 +598,32 @@ assign -> 赋值操作
 /*
 insert -> 插入操作
 
+1. 直接在某个位置(iterator pos)插入一个或多个元素
+	一个元素：在末尾插入直接 construct 其他就 __insert_aux ，这里面处理扩容的逻辑
+	多个元素: __fill_insert
+
+
+2 在 pos 位置插入[first, last)内的元素
+
+	__insert_dispatch(integer())
+		__true_type: __fill_insert()
+
+		__false_type:__range_insert()
+			forward_ite: uninitialized_copy
+			input_ite: insert one by one 
 */
 
 
 /*
 函数会针对是否是POD type 进行重载， POD type 可以直接memcpy, 非POD 需要调用构造器进行复制。
 
+*/
+
+
+
+/*
+主要解决的问题：
+1.内存的分配和管理  
+2.vector自身一些算法  怎删改查的一些算法
+3.泛型设计， 迭代器相关
 */

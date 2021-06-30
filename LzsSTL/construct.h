@@ -1,8 +1,8 @@
 #ifndef CONSTRUCT_HH
 #define CONSTRUCT_HH
 
-#incldue "type_traits.h"
-#incldue "iterator.h"
+#include "type_traits.h"
+#include "iterator.h"
 
 //构造函数,  分配内存   在分配的内存上构造对象
 

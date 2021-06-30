@@ -2,6 +2,7 @@
 #define UNINITIALIZED_HH
 #include <cstring>
 #include "allocator.h"
+#include "algobase.h"
 // 未初始化容器的 copy fill fill_n操作
 
 
@@ -27,8 +28,8 @@ template<class InputIterator, class ForwardIterator>
 inline ForwardIterator
 __uninitialized_copy_aux(InputIterator first, InputIterator last, ForwardIterator result, __true_type)
 {
-	//return ::copy(first, last, result);
-	return nullptr;
+	return ::copy(first, last, result);
+	//return nullptr;
 }
 
 template<class InputIterator, class ForwardIterator>

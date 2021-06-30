@@ -7,28 +7,10 @@ class alloc
 public:
 	static T* allocate(size_t n) { 
 		//return (T*)malloc(n*sizeof(T)); 
-		return new T[n];
+		//return new T[n];
+		return (T*)operator new(n);
 	}
 	static void deallocate(T* ptr) { free(ptr); }
 };
 
-template<class T>
-void construct(T*ptr)
-{
-}
-
-template<class T>
-void construct(T* ptr, const T& x)
-{
-}
-
-template<class T>
-void destroy(T* ptr)
-{
-}
-
-template<class T>
-void destroy(T* first, T* last)
-{
-}
 #endif

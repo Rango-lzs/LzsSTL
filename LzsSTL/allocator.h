@@ -2,7 +2,7 @@
 #define ALLOCATOR_HH
 
 #include "alloc.h"
-//#include "construct.h"
+#include "construct.h"
 
 template <class T,class Alloc=alloc>
 class allocator
@@ -78,3 +78,16 @@ void allocator<T,Alloc>::destroy(T* first, T* last)
     ::destroy(first,last);
 }
 #endif
+
+/*
+alloactor 提供的基本功能：
+
+1. allocate and deallocate 分配内存
+
+	此功能有alloc类来提供
+
+
+2. construct and destroy 构造和销毁元素
+
+	此功能由全局的construct 来提供
+*/

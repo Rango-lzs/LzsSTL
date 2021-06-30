@@ -3,7 +3,7 @@
 
 int main()
 {
-	vector<int> vec(size_t(5),10);
+	vector<int> vec;
 	vec.push_back(1);
 	vec.push_back(2);
 	vec.push_back(4);
