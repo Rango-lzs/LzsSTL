@@ -44,7 +44,7 @@ template<class T, class Alloc>
 void allocator<T,Alloc>::deallocate(T* ptr)
 {
     if(ptr==nullptr) return;
-	Alloc::deallocate(ptr,sizeof(T));
+	Alloc::deallocate(ptr);
 }
 
 template<class T,class Alloc>
